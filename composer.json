@@ -1,0 +1,8 @@
+{
+    "name": "abuseio/parser-cleanmx",
+    "description": "Parser addon for handling notifications from cleanmx",
+    "require": {
+        "php": ">=5.4.0",
+        "another-vendor/package": "1.*"
+    }
+}

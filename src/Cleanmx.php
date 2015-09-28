@@ -2,14 +2,13 @@
 
 namespace AbuseIO\Parsers;
 
-use Log;
 use ReflectionClass;
+use Log;
 
 class Cleanmx extends Parser
 {
     public $parsedMail;
     public $arfMail;
-    public $configBase;
 
     /**
      * Create a new Cleanmx instance
@@ -38,6 +37,7 @@ class Cleanmx extends Parser
             config("{$this->configBase}.parser.name")
         );
 
+        // Define array where all events are going to be saved in.
         $events = [ ];
 
         /**
@@ -57,7 +57,7 @@ class Cleanmx extends Parser
 
         // We found an ARF report, yay!
         if (!empty($raw_report)) {
-            preg_match_all('/([\w\-]+): (.*)[ ]*\r?\n/', $report, $match);
+            preg_match_all('/([\w\-]+): (.*)[ ]*\r?\n/', $raw_report, $match);
             $report = array_combine($match[1], array_map('trim', $match[2]));
             if (empty($report['Report-Type'])) {
                 return $this->failed(
@@ -68,10 +68,9 @@ class Cleanmx extends Parser
             $feedName = $report['Report-Type'];
 
             // If feed is known and enabled, validate data and save report
-            if ($this->isKnownFeed($this->configBase, $feedName) &&
-                $this->isEnabledFeed($this->configBase, $feedName)) {
+            if ($this->isKnownFeed($feedName) && $this->isEnabledFeed($feedName)) {
                 // Sanity checks (skip if required fields are unset)
-                if ($this->hasRequiredFields($this->configBase, $feedName, $report) === true) {
+                if ($this->hasRequiredFields($feedName, $report) === true) {
                     $events[] = [
                         'source'        => config("{$this->configBase}.parser.name"),
                         'ip'            => $report['Source'],
@@ -82,11 +81,19 @@ class Cleanmx extends Parser
                         'timestamp'     => strtotime($report['Date']),
                         'information'   => json_encode($report),
                     ];
+                } else {
+                    return $this->failed(
+                        "Required field {$this->requiredField} is missing in the report or config is incorrect."
+                    );
                 }
+            } else {
+                return $this->failed(
+                    "Detected feed '{$feedName}' is unknown or disabled."
+                );
             }
 
         } else {
-            // Didn't find ARF report. Go scrape the email body!
+            // Didn't find an ARF report, go scrape the email body!
             $body = $this->parsedMail->getMessageBody();
             preg_match_all(
                 '/\n\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\| \r\n]*)/',
@@ -153,10 +160,10 @@ class Cleanmx extends Parser
                 }
 
                 // If feed is known and enabled, validate data and save report
-                if ($this->isKnownFeed($this->configBase, $feedName) &&
-                    $this->isEnabledFeed($this->configBase, $feedName)) {
+                if ($this->isKnownFeed($feedName) &&
+                    $this->isEnabledFeed($feedName)) {
                     // Sanity checks (skip if required fields are unset)
-                    if ($this->hasRequiredFields($this->configBase, $feedName, $report) === true) {
+                    if ($this->hasRequiredFields($feedName, $report) === true) {
                         $events[] = [
                             'source'        => config("{$this->configBase}.parser.name"),
                             'ip'            => $report['ip'],
@@ -167,7 +174,15 @@ class Cleanmx extends Parser
                             'timestamp'     => strtotime($report['date']),
                             'information'   => json_encode($report),
                         ];
+                    } else {
+                        return $this->failed(
+                            "Required field ${column} is missing in the report or config is incorrect."
+                        );
                     }
+                } else {
+                    return $this->failed(
+                        "Detected feed '{$feedName}' is unknown or disabled."
+                    );
                 }
             }
         }

@@ -65,19 +65,19 @@ class Cleanmx extends Parser
                 );
             }
 
-            $feedName = $report['Report-Type'];
+            $this->feedName = $report['Report-Type'];
 
             // If feed is known and enabled, validate data and save report
-            if ($this->isKnownFeed($feedName) && $this->isEnabledFeed($feedName)) {
+            if ($this->isKnownFeed() && $this->isEnabledFeed()) {
                 // Sanity checks (skip if required fields are unset)
-                if ($this->hasRequiredFields($feedName, $report) === true) {
+                if ($this->hasRequiredFields($report) === true) {
                     $events[] = [
                         'source'        => config("{$this->configBase}.parser.name"),
                         'ip'            => $report['Source'],
                         'domain'        => false,
                         'uri'           => false,
-                        'class'         => config("{$this->configBase}.feeds.{$feedName}.class"),
-                        'type'          => config("{$this->configBase}.feeds.{$feedName}.type"),
+                        'class'         => config("{$this->configBase}.feeds.{$this->feedName}.class"),
+                        'type'          => config("{$this->configBase}.feeds.{$this->feedName}.type"),
                         'timestamp'     => strtotime($report['Date']),
                         'information'   => json_encode($report),
                     ];
@@ -88,7 +88,7 @@ class Cleanmx extends Parser
                 }
             } else {
                 return $this->failed(
-                    "Detected feed '{$feedName}' is unknown or disabled."
+                    "Detected feed '{$this->feedName}' is unknown or disabled."
                 );
             }
 
@@ -118,6 +118,7 @@ class Cleanmx extends Parser
                 '/clean-mx-phishing/'   => 'phishing',
             );
 
+            $type = 'default';
             foreach ($subjectMap as $regex => $t) {
                 if (preg_match($regex, $subject)) {
                     $type = $t;
@@ -125,15 +126,15 @@ class Cleanmx extends Parser
                 }
             }
 
+            $portalFeeds = [ ];
+
             switch ($type) {
                 case 'phishing':
-                    $feedName = 'clean-mx-phishing';
+                    $this->feedName = 'clean-mx-phishing';
                     break;
-
                 case 'viruses':
-                    $feedName = 'clean-mx-viruses';
+                    $this->feedName = 'clean-mx-viruses';
                     break;
-
                 case 'portals':
                     $portalFeeds = [
                         'cleanmx_phish',
@@ -155,35 +156,38 @@ class Cleanmx extends Parser
             foreach ($reports as $report) {
                 if ($type == 'phishing') {
                     if (!empty($report['virusname']) && in_array($report['virusname'], $portalFeeds)) {
-                        $feedName = $report['virusname'];
+                        $this->feedName = $report['virusname'];
                     }
                 }
 
-                // If feed is known and enabled, validate data and save report
-                if ($this->isKnownFeed($feedName) &&
-                    $this->isEnabledFeed($feedName)) {
-                    // Sanity checks (skip if required fields are unset)
-                    if ($this->hasRequiredFields($feedName, $report) === true) {
-                        $events[] = [
-                            'source'        => config("{$this->configBase}.parser.name"),
-                            'ip'            => $report['ip'],
-                            'class'         => config("{$this->configBase}.feeds.{$feedName}.class"),
-                            'type'          => config("{$this->configBase}.feeds.{$feedName}.type"),
-                            'domain'        => (isset($report['domain'])) ? $report['domain'] : false,
-                            'uri'           => (isset($report['Url'])) ? $report['Url'] : false,
-                            'timestamp'     => strtotime($report['date']),
-                            'information'   => json_encode($report),
-                        ];
-                    } else {
-                        return $this->failed(
-                            "Required field ${column} is missing in the report or config is incorrect."
-                        );
-                    }
-                } else {
+                if (!$this->isKnownFeed()) {
                     return $this->failed(
-                        "Detected feed '{$feedName}' is unknown or disabled."
+                        "Detected feed {$this->feedName} is unknown."
                     );
                 }
+
+                if (!$this->isEnabledFeed()) {
+                    continue;
+                }
+
+                if (!$this->hasRequiredFields($report)) {
+                    return $this->failed(
+                        "Required field {$this->requiredField} is missing or the config is incorrect."
+                    );
+                }
+
+                $report = $this->applyFilters($report);
+
+                $events[] = [
+                    'source'        => config("{$this->configBase}.parser.name"),
+                    'ip'            => $report['ip'],
+                    'class'         => config("{$this->configBase}.feeds.{$this->feedName}.class"),
+                    'type'          => config("{$this->configBase}.feeds.{$this->feedName}.type"),
+                    'domain'        => (isset($report['domain'])) ? $report['domain'] : false,
+                    'uri'           => (isset($report['Url'])) ? $report['Url'] : false,
+                    'timestamp'     => strtotime($report['date']),
+                    'information'   => json_encode($report),
+                ];
             }
         }
 

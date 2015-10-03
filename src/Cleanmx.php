@@ -2,21 +2,14 @@
 
 namespace AbuseIO\Parsers;
 
-use ReflectionClass;
-use Log;
-
 class Cleanmx extends Parser
 {
-    public $parsedMail;
-    public $arfMail;
-
     /**
      * Create a new Cleanmx instance
      */
     public function __construct($parsedMail, $arfMail)
     {
-        $this->parsedMail = $parsedMail;
-        $this->arfMail = $arfMail;
+        parent::__construct($parsedMail, $arfMail, $this);
     }
 
     /**
@@ -26,20 +19,6 @@ class Cleanmx extends Parser
      */
     public function parse()
     {
-        // Generalize the local config based on the parser class name.
-        $reflect = new ReflectionClass($this);
-        $this->configBase = 'parsers.' . $reflect->getShortName();
-
-        Log::info(
-            get_class($this). ': Received message from: '.
-            $this->parsedMail->getHeader('from') . " with subject: '" .
-            $this->parsedMail->getHeader('subject') . "' arrived at parser: " .
-            config("{$this->configBase}.parser.name")
-        );
-
-        // Define array where all events are going to be saved in.
-        $events = [ ];
-
         /**
          *  Try to find ARF report.
          *  Some notification emails do not contain an ARF report. Instead they
@@ -47,150 +26,144 @@ class Cleanmx extends Parser
          *  things simple cleanmx!). In that case we jump down and parse the
          *  email body.
          */
+        $foundArf = false;
         foreach ($this->parsedMail->getAttachments() as $attachment) {
             // Only use the Cleanmx formatted files, skip all others
             if (preg_match(config("{$this->configBase}.parser.report_file"), $attachment->filename)) {
                 $raw_report = $attachment->getContent();
-                break;
+
+                // We found an ARF report, yay!
+                if (!empty($raw_report)) {
+                    $foundArf = true;
+
+                    if (!preg_match_all('/([\w\-]+): (.*)[ ]*\r?\n/', $raw_report, $matches)) {
+                        $this->warningCount++;
+                        continue;
+                    }
+
+                    $report = array_combine($matches[1], array_map('trim', $matches[2]));
+
+                    if (!empty($report['Report-Type'])) {
+                        $this->feedName = $report['Report-Type'];
+
+                        // If feed is known and enabled, validate data and save report
+                        if ($this->isKnownFeed() && $this->isEnabledFeed()) {
+                            // Sanity check
+                            if ($this->hasRequiredFields($report) === true) {
+                                // Event has all requirements met, filter and add!
+                                $report = $this->applyFilters($report);
+
+                                $this->events[] = [
+                                    'source'        => config("{$this->configBase}.parser.name"),
+                                    'ip'            => $report['Source'],
+                                    'domain'        => false,
+                                    'uri'           => false,
+                                    'class'         => config("{$this->configBase}.feeds.{$this->feedName}.class"),
+                                    'type'          => config("{$this->configBase}.feeds.{$this->feedName}.type"),
+                                    'timestamp'     => strtotime($report['Date']),
+                                    'information'   => json_encode($report),
+                                ];
+                            }
+                        }
+                    } else {
+                        $this->warningCount++;
+                    }
+                }
             }
         }
 
-        // We found an ARF report, yay!
-        if (!empty($raw_report)) {
-            preg_match_all('/([\w\-]+): (.*)[ ]*\r?\n/', $raw_report, $match);
-            $report = array_combine($match[1], array_map('trim', $match[2]));
-            if (empty($report['Report-Type'])) {
-                return $this->failed(
-                    "Unabled to detect feed because of required field Report-Type is missing"
-                );
-            }
-
-            $this->feedName = $report['Report-Type'];
-
-            // If feed is known and enabled, validate data and save report
-            if ($this->isKnownFeed() && $this->isEnabledFeed()) {
-                // Sanity checks (skip if required fields are unset)
-                if ($this->hasRequiredFields($report) === true) {
-                    $events[] = [
-                        'source'        => config("{$this->configBase}.parser.name"),
-                        'ip'            => $report['Source'],
-                        'domain'        => false,
-                        'uri'           => false,
-                        'class'         => config("{$this->configBase}.feeds.{$this->feedName}.class"),
-                        'type'          => config("{$this->configBase}.feeds.{$this->feedName}.type"),
-                        'timestamp'     => strtotime($report['Date']),
-                        'information'   => json_encode($report),
-                    ];
-                } else {
-                    return $this->failed(
-                        "Required field {$this->requiredField} is missing in the report or config is incorrect."
-                    );
-                }
-            } else {
-                return $this->failed(
-                    "Detected feed '{$this->feedName}' is unknown or disabled."
-                );
-            }
-
-        } else {
+        if ($foundArf === false) {
             // Didn't find an ARF report, go scrape the email body!
-            $body = $this->parsedMail->getMessageBody();
-            preg_match_all(
+            if (preg_match_all(
                 '/\n\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\|]*)[ ]*\|([^\| \r\n]*)/',
-                $body,
-                $regs
-            );
-            array_shift($regs);
+                $this->parsedMail->getMessageBody(),
+                $matches
+            )
+            ) {
+                array_shift($matches);
 
-            $reports = [ ];
-            foreach ($regs as $r) {
-                $name = trim(array_shift($r));
-                foreach ($r as $i => $value) {
-                    $reports[$i][$name] = trim($value);
-                }
-            }
-
-            // What's the report type
-            $subject = $this->parsedMail->getHeader('subject');
-            $subjectMap = array(
-                '/clean-mx-portals/'    => 'portals',
-                '/clean-mx-viruses/'    => 'viruses',
-                '/clean-mx-phishing/'   => 'phishing',
-            );
-
-            $type = 'default';
-            foreach ($subjectMap as $regex => $t) {
-                if (preg_match($regex, $subject)) {
-                    $type = $t;
-                    break;
-                }
-            }
-
-            $portalFeeds = [ ];
-
-            switch ($type) {
-                case 'phishing':
-                    $this->feedName = 'clean-mx-phishing';
-                    break;
-                case 'viruses':
-                    $this->feedName = 'clean-mx-viruses';
-                    break;
-                case 'portals':
-                    $portalFeeds = [
-                        'cleanmx_phish',
-                        'cleanmx_spamvertized',
-                        'cleanmx_generic',
-                        'defaced_site',
-                        'cysc.blacklisted.file.gd_url_cloud',
-                        'JS/Decdec.psc',
-                        'HIDDENEXT/Worm.Gen',
-                        'unknown_html_RFI_php',
-                    ];
-                    break;
-                default:
-                    // If we didn't find any report type, go to next report
-                    continue;
-            }
-
-            // Save reports
-            foreach ($reports as $report) {
-                if ($type == 'phishing') {
-                    if (!empty($report['virusname']) && in_array($report['virusname'], $portalFeeds)) {
-                        $this->feedName = $report['virusname'];
+                $reports = [ ];
+                foreach ($matches as $r) {
+                    $name = trim(array_shift($r));
+                    foreach ($r as $i => $value) {
+                        $reports[$i][$name] = trim($value);
                     }
                 }
 
-                if (!$this->isKnownFeed()) {
-                    return $this->failed(
-                        "Detected feed {$this->feedName} is unknown."
-                    );
+                // What's the report type
+                $subject = $this->parsedMail->getHeader('subject');
+                $subjectMap = array(
+                    '/clean-mx-portals/'    => 'portals',
+                    '/clean-mx-viruses/'    => 'viruses',
+                    '/clean-mx-phishing/'   => 'phishing',
+                );
+
+                $type = 'default';
+                foreach ($subjectMap as $regex => $t) {
+                    if (preg_match($regex, $subject)) {
+                        $type = $t;
+                        break;
+                    }
                 }
 
-                if (!$this->isEnabledFeed()) {
-                    continue;
+                $portalFeeds = [ ];
+
+                switch ($type) {
+                    case 'phishing':
+                        $this->feedName = 'clean-mx-phishing';
+                        break;
+                    case 'viruses':
+                        $this->feedName = 'clean-mx-viruses';
+                        break;
+                    case 'portals':
+                        $portalFeeds = [
+                            'cleanmx_phish',
+                            'cleanmx_spamvertized',
+                            'cleanmx_generic',
+                            'defaced_site',
+                            'cysc.blacklisted.file.gd_url_cloud',
+                            'JS/Decdec.psc',
+                            'HIDDENEXT/Worm.Gen',
+                            'unknown_html_RFI_php',
+                        ];
+                        break;
+                    default:
+                        // If we didn't find any report type, go to next report
+                        continue;
                 }
 
-                if (!$this->hasRequiredFields($report)) {
-                    return $this->failed(
-                        "Required field {$this->requiredField} is missing or the config is incorrect."
-                    );
+                // Save reports
+                foreach ($reports as $report) {
+                    if ($type == 'phishing') {
+                        if (!empty($report['virusname']) && in_array($report['virusname'], $portalFeeds)) {
+                            $this->feedName = $report['virusname'];
+                        }
+                    }
+
+                    // If feed is known and enabled, validate data and save report
+                    if ($this->isKnownFeed() && $this->isEnabledFeed()) {
+                        // Sanity check
+                        if ($this->hasRequiredFields($report) === true) {
+                            // Event has all requirements met, filter and add!
+                            $report = $this->applyFilters($report);
+
+
+                            $this->events[] = [
+                                'source'        => config("{$this->configBase}.parser.name"),
+                                'ip'            => $report['ip'],
+                                'class'         => config("{$this->configBase}.feeds.{$this->feedName}.class"),
+                                'type'          => config("{$this->configBase}.feeds.{$this->feedName}.type"),
+                                'domain'        => (isset($report['domain'])) ? $report['domain'] : false,
+                                'uri'           => (isset($report['Url'])) ? $report['Url'] : false,
+                                'timestamp'     => strtotime($report['date']),
+                                'information'   => json_encode($report),
+                            ];
+                        }
+                    }
                 }
-
-                $report = $this->applyFilters($report);
-
-                $events[] = [
-                    'source'        => config("{$this->configBase}.parser.name"),
-                    'ip'            => $report['ip'],
-                    'class'         => config("{$this->configBase}.feeds.{$this->feedName}.class"),
-                    'type'          => config("{$this->configBase}.feeds.{$this->feedName}.type"),
-                    'domain'        => (isset($report['domain'])) ? $report['domain'] : false,
-                    'uri'           => (isset($report['Url'])) ? $report['Url'] : false,
-                    'timestamp'     => strtotime($report['date']),
-                    'information'   => json_encode($report),
-                ];
             }
         }
 
-        return $this->success($events);
+        return $this->success();
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 namespace AbuseIO\Parsers;
+
 use AbuseIO\Models\Incident;
 
 /**
@@ -58,7 +59,7 @@ class Cleanmx extends Parser
                         if ($this->isKnownFeed() && $this->isEnabledFeed()) {
                             // Sanity check
                             if ($this->hasRequiredFields($report) === true) {
-                                // Event has all requirements met, filter and add!
+                                // incident has all requirements met, filter and add!
                                 $report = $this->applyFilters($report);
 
                                 $incident = new Incident();
@@ -72,7 +73,7 @@ class Cleanmx extends Parser
                                 $incident->timestamp   = strtotime($report['Date']);
                                 $incident->information = json_encode($report);
 
-                                $this->events[] = $incident;
+                                $this->incidents[] = $incident;
 
                             }
                         }
@@ -155,7 +156,7 @@ class Cleanmx extends Parser
                     if ($this->isKnownFeed() && $this->isEnabledFeed()) {
                         // Sanity check
                         if ($this->hasRequiredFields($report) === true) {
-                            // Event has all requirements met, filter and add!
+                            // incident has all requirements met, filter and add!
                             $report = $this->applyFilters($report);
 
                             $incident = new Incident();
@@ -169,7 +170,7 @@ class Cleanmx extends Parser
                             $incident->timestamp   = strtotime($report['date']);
                             $incident->information = json_encode($report);
 
-                            $this->events[] = $incident;
+                            $this->incidents[] = $incident;
                         }
                     }
                 }

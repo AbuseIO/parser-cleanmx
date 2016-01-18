@@ -135,7 +135,7 @@ return [
             ],
         ],
 
-        'cysc.blacklisted.file.gd_url_cloud' => [
+        'cysc_blacklisted_file_gd_url_cloud' => [
             'class'     => 'Compromised website',
             'type'      => 'Abuse',
             'enabled'   => true,

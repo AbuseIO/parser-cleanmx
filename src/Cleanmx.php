@@ -133,7 +133,7 @@ class Cleanmx extends Parser
                             'cleanmx_spamvertized',
                             'cleanmx_generic',
                             'defaced_site',
-                            'cysc.blacklisted.file.gd_url_cloud',
+                            'cysc_blacklisted_file_gd_url_cloud',
                             'JS/Decdec.psc',
                             'HIDDENEXT/Worm.Gen',
                             'unknown_html_RFI_php',
@@ -147,6 +147,9 @@ class Cleanmx extends Parser
                 // Save reports
                 foreach ($reports as $report) {
                     if ($type == 'portals') {
+                        // Do not use dots in the name as it confuses the config base
+                        $report['virusname'] = str_replace('.', '_', $report['virusname']);
+
                         if (!empty($report['virusname']) && in_array($report['virusname'], $portalFeeds)) {
                             $this->feedName = $report['virusname'];
                         }

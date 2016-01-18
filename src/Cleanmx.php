@@ -146,7 +146,7 @@ class Cleanmx extends Parser
 
                 // Save reports
                 foreach ($reports as $report) {
-                    if ($type == 'phishing') {
+                    if ($type == 'portals') {
                         if (!empty($report['virusname']) && in_array($report['virusname'], $portalFeeds)) {
                             $this->feedName = $report['virusname'];
                         }

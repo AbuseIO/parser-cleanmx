@@ -16,7 +16,7 @@ return [
     'feeds' => [
         'login-attack' => [
             'class'     => 'LOGIN_ATTACK',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'Source',
@@ -26,7 +26,7 @@ return [
 
         'info' => [
             'class'     => 'INFORMATIONAL',
-            'type'      => 'Info',
+            'type'      => 'INFO',
             'enabled'   => true,
             'fields'    => [
                 'Source',
@@ -36,7 +36,7 @@ return [
 
         'harvesting' => [
             'class'     => 'HARVESTING',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'Source',
@@ -46,7 +46,7 @@ return [
 
         'hack-attack' => [
             'class'     => 'HACK_ATTACK',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'Source',
@@ -56,7 +56,7 @@ return [
 
         'comment spam' => [
             'class'     => 'COMMENT_SPAM',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'Source',
@@ -66,7 +66,7 @@ return [
 
         'Denial of service' => [
             'class'     => 'DDOS_SENDING_SERVER',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'Source',
@@ -77,7 +77,7 @@ return [
         // Feeds not coming from ARF reports
         'clean-mx-phishing' => [
             'class'     => 'PHISING_WEBSITE',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -87,7 +87,7 @@ return [
 
         'clean-mx-viruses' => [
             'class'     => 'MALWARE_INFECTION',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -97,7 +97,7 @@ return [
 
         'cleanmx_phish' => [
             'class'     => 'PHISING_WEBSITE',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -107,7 +107,7 @@ return [
 
         'cleanmx_spamvertized' => [
             'class'     => 'SPAMVERTISED_WEBSITE',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -117,7 +117,7 @@ return [
 
         'cleanmx_generic' => [
             'class'     => 'COMPROMISED_WEBSITE',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -127,7 +127,7 @@ return [
 
         'defaced_site' => [
             'class'     => 'COMPROMISED_WEBSITE',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -137,7 +137,7 @@ return [
 
         'cysc.blacklisted.file.gd_url_cloud' => [
             'class'     => 'COMPROMISED_WEBSITE',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -147,7 +147,7 @@ return [
 
         'JS/Decdec.psc' => [
             'class'     => 'MALWARE_INFECTION',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -157,7 +157,7 @@ return [
 
         'HIDDENEXT/Worm.Gen' => [
             'class'     => 'MALWARE_INFECTION',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',
@@ -167,7 +167,7 @@ return [
 
         'unknown_html_RFI_php' => [
             'class'     => 'COMPROMISED_WEBSITE website',
-            'type'      => 'Abuse',
+            'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
                 'ip',

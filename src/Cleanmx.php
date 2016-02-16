@@ -155,13 +155,6 @@ class Cleanmx extends Parser
                         }
                     }
 
-                    if (!empty($report['Url'])) {
-                        $urlInfo = parse_url($report['Url']);
-                        if (!empty($urlInfo['path'])) {
-                            $report['uri'] = $urlInfo['path'];
-                        }
-                    }
-
                     // If feed is known and enabled, validate data and save report
                     if ($this->isKnownFeed() && $this->isEnabledFeed()) {
                         // Sanity check
@@ -173,8 +166,8 @@ class Cleanmx extends Parser
                             $incident->source      = config("{$this->configBase}.parser.name");
                             $incident->source_id   = false;
                             $incident->ip          = $report['ip'];
-                            $incident->domain      = (isset($report['domain'])) ? $report['domain'] : false;
-                            $incident->uri         = (isset($report['uri'])) ? $report['uri'] : false;
+                            $incident->domain      = getDomain($report['Url']);
+                            $incident->uri         = getUri($report['Url']);
                             $incident->class       = config("{$this->configBase}.feeds.{$this->feedName}.class");
                             $incident->type        = config("{$this->configBase}.feeds.{$this->feedName}.type");
                             $incident->timestamp   = strtotime($report['date']);

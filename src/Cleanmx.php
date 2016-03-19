@@ -67,7 +67,6 @@ class Cleanmx extends Parser
                                 $incident->source_id   = false;
                                 $incident->ip          = $report['Source'];
                                 $incident->domain      = false;
-                                $incident->uri         = false;
                                 $incident->class       = config("{$this->configBase}.feeds.{$this->feedName}.class");
                                 $incident->type        = config("{$this->configBase}.feeds.{$this->feedName}.type");
                                 $incident->timestamp   = strtotime($report['Date']);
@@ -167,7 +166,6 @@ class Cleanmx extends Parser
                             $incident->source_id   = false;
                             $incident->ip          = $report['ip'];
                             $incident->domain      = empty($report['Url']) ? false : getDomain($report['Url']);
-                            $incident->uri         = empty($report['Url']) ? false : getUri($report['Url']);
                             $incident->class       = config("{$this->configBase}.feeds.{$this->feedName}.class");
                             $incident->type        = config("{$this->configBase}.feeds.{$this->feedName}.type");
                             $incident->timestamp   = strtotime($report['date']);

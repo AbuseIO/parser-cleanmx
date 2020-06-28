@@ -140,7 +140,7 @@ class Cleanmx extends Parser
                         break;
                     default:
                         // If we didn't find any report type, go to next report
-                        continue;
+			return $this->success();
                 }
 
                 // Save reports

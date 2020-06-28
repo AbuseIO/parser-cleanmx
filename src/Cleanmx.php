@@ -38,7 +38,7 @@ class Cleanmx extends Parser
         $foundArf = false;
         foreach ($this->parsedMail->getAttachments() as $attachment) {
             // Only use the Cleanmx formatted files, skip all others
-            if (preg_match(config("{$this->configBase}.parser.report_file"), $attachment->filename)) {
+            if (preg_match(config("{$this->configBase}.parser.report_file"), $attachment->getFilename())) {
                 $raw_report = $attachment->getContent();
 
                 // We found an ARF report, yay!

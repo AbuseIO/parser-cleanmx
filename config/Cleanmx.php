@@ -76,7 +76,7 @@ return [
 
         // Feeds not coming from ARF reports
         'clean-mx-phishing' => [
-            'class'     => 'PHISING_WEBSITE',
+            'class'     => 'PHISHING_WEBSITE',
             'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
@@ -96,7 +96,7 @@ return [
         ],
 
         'cleanmx_phish' => [
-            'class'     => 'PHISING_WEBSITE',
+            'class'     => 'PHISHING_WEBSITE',
             'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [

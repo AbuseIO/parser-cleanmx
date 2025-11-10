@@ -166,7 +166,7 @@ return [
         ],
 
         'unknown_html_RFI_php' => [
-            'class'     => 'COMPROMISED_WEBSITE website',
+            'class'     => 'COMPROMISED_WEBSITE',
             'type'      => 'ABUSE',
             'enabled'   => true,
             'fields'    => [
